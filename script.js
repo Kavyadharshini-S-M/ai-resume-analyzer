@@ -15,8 +15,7 @@ async function analyzeResume() {
         return;
     }
 
-    analyzeButton.disabled = true;
-    analyzeButton.textContent = "Analyzing with AI...";
+    setLoading(true);
 
     resultsSection.style.display = "block";
     resultMessage.textContent = "The AI is reviewing your resume...";
@@ -41,11 +40,107 @@ async function analyzeResume() {
             throw new Error(data.error || "Analysis failed.");
         }
 
-        resultMessage.textContent = data.analysis;
+        displayAnalysis(data.analysis);
     } catch (error) {
         resultMessage.textContent = error.message;
     } finally {
-        analyzeButton.disabled = false;
-        analyzeButton.textContent = "Analyze Resume";
+        setLoading(false);
     }
+}
+
+function setLoading(isLoading) {
+    analyzeButton.disabled = isLoading;
+
+    analyzeButton.textContent = isLoading
+        ? "Analyzing with AI..."
+        : "Analyze Resume";
+}
+
+function displayAnalysis(analysis) {
+    resultMessage.replaceChildren();
+
+    const scoreCard = document.createElement("div");
+    scoreCard.className = "score-card";
+
+    const score = document.createElement("div");
+    score.className = "score";
+    score.textContent = `${analysis.matchScore}%`;
+
+    const scoreLabel = document.createElement("p");
+    scoreLabel.textContent = "AI-estimated match score";
+
+    scoreCard.append(score, scoreLabel);
+    resultMessage.appendChild(scoreCard);
+
+    resultMessage.appendChild(
+        createTagSection(
+            "Matched Skills",
+            analysis.matchedSkills,
+            "matched"
+        )
+    );
+
+    resultMessage.appendChild(
+        createTagSection(
+            "Missing Skills",
+            analysis.missingSkills,
+            "missing"
+        )
+    );
+
+    resultMessage.appendChild(
+        createListSection(
+            "Strengths",
+            analysis.strengths
+        )
+    );
+
+    resultMessage.appendChild(
+        createListSection(
+            "Improvements",
+            analysis.improvements
+        )
+    );
+}
+
+function createTagSection(title, items, tagClass) {
+    const section = document.createElement("section");
+    section.className = "result-card";
+
+    const heading = document.createElement("h3");
+    heading.textContent = title;
+
+    const tagContainer = document.createElement("div");
+    tagContainer.className = "tag-container";
+
+    for (const item of items) {
+        const tag = document.createElement("span");
+        tag.className = `tag ${tagClass}`;
+        tag.textContent = item;
+        tagContainer.appendChild(tag);
+    }
+
+    section.append(heading, tagContainer);
+
+    return section;
+}
+
+function createListSection(title, items) {
+    const section = document.createElement("section");
+    section.className = "result-card";
+
+    const heading = document.createElement("h3");
+    heading.textContent = title;
+
+    const list = document.createElement("ul");
+
+    for (const item of items) {
+        const listItem = document.createElement("li");
+        listItem.textContent = item;
+        list.appendChild(listItem);
+    }
+
+    section.append(heading, list);
+
+    return section;
 }

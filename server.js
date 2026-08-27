@@ -22,6 +22,61 @@ app.get("/", (request, response) => {
     response.send("AI Resume Analyzer backend is running!");
 });
 
+const analysisSchema = {
+    type: "object",
+
+    properties: {
+        matchScore: {
+            type: "integer",
+            minimum: 0,
+            maximum: 100,
+            description: "Estimated resume and job match score"
+        },
+
+        matchedSkills: {
+            type: "array",
+            items: {
+                type: "string"
+            },
+            description: "Skills and experiences matching the job"
+        },
+
+        missingSkills: {
+            type: "array",
+            items: {
+                type: "string"
+            },
+            description: "Important missing or unclear skills"
+        },
+
+        strengths: {
+            type: "array",
+            items: {
+                type: "string"
+            },
+            description: "Candidate strengths relevant to the job"
+        },
+
+        improvements: {
+            type: "array",
+            items: {
+                type: "string"
+            },
+            description: "Specific resume improvement suggestions"
+        }
+    },
+
+    required: [
+        "matchScore",
+        "matchedSkills",
+        "missingSkills",
+        "strengths",
+        "improvements"
+    ],
+
+    additionalProperties: false
+};
+
 app.post("/analyze", async (request, response) => {
     try {
         const { resume, jobDescription } = request.body;
@@ -32,31 +87,18 @@ app.post("/analyze", async (request, response) => {
             });
         }
 
-        const prompt = `
-You are an expert technical recruiter and resume reviewer.
+const prompt = `
+Act as an experienced technical recruiter.
 
-Compare the candidate's resume with the job description.
+Compare the resume and job description based on meaning,
+evidence and transferable experience—not only exact keywords.
 
-Evaluate meaning and transferable experience—not merely exact keyword matches.
-
-Return your answer using exactly these headings:
-
-MATCH SCORE:
-A realistic score from 0 to 100.
-
-MATCHED SKILLS:
-Skills and experience that match the job.
-
-MISSING SKILLS:
-Important requirements that are absent or unclear.
-
-STRENGTHS:
-The strongest parts of the resume for this position.
-
-IMPROVEMENTS:
-Specific and honest improvements the candidate should make.
-
-Do not invent qualifications that are not present in the resume.
+Rules:
+- Give a realistic match score from 0 to 100.
+- Do not invent qualifications.
+- Keep each list item concise and specific.
+- Treat preferred skills differently from required skills.
+- Mention important requirements that are absent or unclear.
 
 RESUME:
 ${resume}
@@ -65,15 +107,25 @@ JOB DESCRIPTION:
 ${jobDescription}
 `;
 
-        const result = await ai.models.generateContent({
+const result = await ai.models.generateContent({
     model: "gemini-3.6-flash",
-    contents: prompt
+    contents: prompt,
+
+    config: {
+        responseFormat: {
+            text: {
+                mimeType: "application/json",
+                schema: analysisSchema
+            }
+        }
+    }
 });
 
+const analysis = JSON.parse(result.text);
 
-        response.json({
-            analysis: result.text
-        });
+response.json({
+    analysis: analysis
+});
     } catch (error) {
         console.error("AI error:", error);
 
